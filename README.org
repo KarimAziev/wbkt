@@ -1,0 +1,42 @@
+* wbkt
+
+Misc commands to enhance xwidgets.
+
+** Installation
+
+Emacs >= 27.1 is required.
+
+*** Manual
+
+Download the source code and put it wherever you like, e.g. into =~/.emacs.d/wbkt/=
+
+#+begin_src shell :eval no
+git clone https://github.com/KarimAziev/wbkt.git ~/.emacs.d/wbkt/
+#+end_src
+
+Add the downloaded directory to the load path:
+
+#+begin_src elisp :eval no
+(add-to-list 'load-path "~/.emacs.d/wbkt/")
+(require 'wbkt)
+#+end_src
+
+#+begin_src elisp :eval no
+(use-package wbkt
+  :straight (wbkt
+             :repo "KarimAziev/wbkt"
+             :files ("js/*.js" "*.el")
+             :type git
+             :host github)
+  :commands (wbkt-xwidget-autofill
+             wbkt-xwidget-unset-dark-theme
+             wbkt-xwidget-set-dark-theme
+             wbkt-xwidget-toggle-theme))
+#+end_src
+
+** Customization
+
+*** ~wbkt-xwidget-inactive-style~
+Alist of html selectors and css values.
+*** ~wbkt-xwidget-autofill-fields~
+Alists of =dom= selectors to perform actions with =wbkt-xwidget-autofill=.
