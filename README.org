@@ -25,7 +25,7 @@ Add the downloaded directory to the load path:
 (use-package wbkt
   :straight (wbkt
              :repo "KarimAziev/wbkt"
-             :files ("js/*.js" "*.el")
+             :files ("*.el" "js")
              :type git
              :host github)
   :commands (wbkt-xwidget-autofill
