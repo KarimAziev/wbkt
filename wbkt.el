@@ -450,6 +450,21 @@ iframe,img,video {
                                    wbkt-xwidget-inactive-style))
                           "500"))
 
+(defun wbkt-xwidget--inject-navigator (&rest _)
+  "Inject clipboard polyfill."
+  (when-let ((active-session (xwidget-webkit-current-session)))
+    (xwidget-webkit-execute-script active-session
+                                   (with-temp-buffer
+                                     (insert-file-contents
+                                      (expand-file-name
+                                       "js/navigator.js"
+                                       wbkt-dir))
+                                     (buffer-string)))))
+
+(defun wbkt-xwidget-inject-navigator (&rest _)
+  "Inject clipboard polyfill."
+  (run-with-timer 1 nil 'wbkt-xwidget--inject-navigator))
+
 (defvar wbkt-xwidget-dark-theme nil)
 
 ;;;###autoload
