@@ -449,10 +449,14 @@ iframe,img,video {
                                   (wbkt-xwidget-alist-style-to-string
                                    wbkt-xwidget-inactive-style))
                           "500"))
+(defun wbkt-current-session ()
+  "Return first found webkit session."
+  (or (xwidget-webkit-current-session)
+      (car xwidget-list)))
 
 (defun wbkt-xwidget--inject-navigator (&rest _)
   "Inject clipboard polyfill."
-  (when-let ((active-session (xwidget-webkit-current-session)))
+  (when-let ((active-session (wbkt-current-session)))
     (xwidget-webkit-execute-script active-session
                                    (with-temp-buffer
                                      (insert-file-contents
@@ -471,7 +475,7 @@ iframe,img,video {
 (defun wbkt-xwidget-toggle-theme ()
   "Toggle theme."
   (interactive)
-  (when-let ((active-session (xwidget-webkit-current-session)))
+  (when-let ((active-session (wbkt-current-session)))
     (setq wbkt-xwidget-dark-theme (not wbkt-xwidget-dark-theme))
     (xwidget-webkit-execute-script active-session
                                    (if wbkt-xwidget-dark-theme
@@ -506,7 +510,7 @@ iframe,img,video {
 
 (defun wbkt-highlight-window ()
   "Temporarly add styles from `wbkt-xwidget-inactive-style' to xwidget page."
-  (when-let ((session (xwidget-webkit-current-session)))
+  (when-let ((session (wbkt-current-session)))
     (unless (bound-and-true-p xwidget-webkit--loading-p)
       (xwidget-webkit-execute-script
        session
@@ -554,7 +558,7 @@ See `wbkt-xwidget-define-event-command'."
   "Execute js actions defined in `wbkt-xwidget-autofill-fields'."
   (interactive)
   (require 'json)
-  (when-let* ((session (xwidget-webkit-current-session))
+  (when-let* ((session (wbkt-current-session))
               (encoded (wbkt-get-autofill-script)))
     (xwidget-webkit-execute-script session encoded)))
 
