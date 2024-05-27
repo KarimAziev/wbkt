@@ -1,4 +1,4 @@
-;;; wbkt.el --- Configure xwidget -*- lexical-binding: t -*-
+;;; wbkt.el --- WebKit xwidgets tools -*- lexical-binding: t -*-
 
 ;; Copyright © 2020-2022 Karim Aziiev <karim.aziiev@gmail.com>
 
@@ -6,7 +6,8 @@
 ;; URL: https://github.com/KarimAziev/wbkt
 ;; Version: 0.1.0
 ;; Keywords: tools
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "29.1"))
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -25,7 +26,8 @@
 
 ;;; Commentary:
 
-;; This file configures operations with xwidget
+;; This package provides tools for working with WebKit xwidgets in Emacs, including
+;; autofill functionality, dark theme toggling, and JavaScript injection.
 
 ;;; Code:
 
@@ -38,31 +40,55 @@
 
 (defconst wbkt-dir (file-name-directory
                     (or load-file-name buffer-file-name))
-  "Directory with `wbkt'.")
+  "Directory of the current file being loaded or edited.")
 
 
 (defcustom wbkt-xwidget-autofill-fields nil
-  "Alists of DOM selectors to perform actions with `wbkt-xwidget-autofill'."
+  "List of autofill field configurations for xwidget-based web interactions.
+
+A list of fields to autofill in xwidget-based web forms.
+
+Each element in the list is an alist where the key is a DOM
+selector string and the value is another alist with the following
+keys:
+
+- :type: Specifies the action to perform, either \"fill\" or \"click\".
+
+- :payload: Contains the data to be filled. It can be a string or
+  a cons cell with `secret' as the key and a string as the value.
+
+- :innerHTML: The value to set for the inner HTML of the selected element."
   :group 'xwidget
   :type '(repeat
           (alist
            :key-type (string :tag "DOM Selector" "input")
            :value-type
            (alist :options
-                  ((:type (radio (const "fill" "fill")
-                                 (const "click" "click"))
-                          "fill")
-                   (:payload
-                    (choice
-                     (cons :format "%v"
-                           (const :format "Secret " secret)
-                           (string :format "Entry %v"))
-                     (string :tag "String")))
-                   (:innerHTML (string :tag "Value")))))))
+            ((:type (radio (const "fill" "fill")
+                     (const "click" "click"))
+              "fill")
+             (:payload
+              (choice
+               (cons :format "%v"
+                (const :format "Secret " secret)
+                (string :format "Entry %v"))
+               (string :tag "String")))
+             (:innerHTML (string :tag "Value")))))))
 
 (defcustom wbkt-xwidget-inactive-style '(("html"
                                           ("opacity" . "0.8")))
-  "Alist of html selectors and css values."
+  "Alist of HTML selectors and their associated CSS properties and values.
+
+An alist defining CSS styles to apply to inactive xwidgets.
+
+Each element in the alist should be a cons cell where the car is a
+string representing an HTML selector and the cdr is another alist
+mapping CSS properties to their values.
+
+Example:
+
+\\='((\"html\" (\"opacity\" . \"0.8\"))
+  (\".inactive\" (\"background-color\" . \"gray\")))"
   :group 'xwidget
   :type `(alist
           :key-type (string :tag "HTML selector" "html")
@@ -366,7 +392,11 @@ If DERIVED-P, test with `derived-mode-p', otherwise use `eq'."
 
 
 (defun wbkt-xwidget-pass-args (js-file &rest args)
-  "Return content of JS-FILE and replace comments /*%s*/ with ARGS."
+  "Insert ARGS-STR before the last closing parenthesis in JS-FILE.
+
+Argument JS-FILE is the path to the JavaScript file.
+
+Remaining arguments ARGS are strings to be inserted into the JavaScript file."
   (let ((args-str (string-join args ", ")))
     (wbkt-js-with-temp-buffer
      (insert-file-contents js-file)
@@ -380,7 +410,7 @@ If DERIVED-P, test with `derived-mode-p', otherwise use `eq'."
 
 
 (defun wbkt-xwidget-get-autofix-fields ()
-  "Return `wbkt-xwidget-autofill-fields'."
+  "Return `wbkt-xwidget-autofill-fields' with secrets from `auth-source-pass'."
   (require 'auth-source-pass)
   (mapcar
    (lambda (item)
@@ -407,17 +437,18 @@ If DERIVED-P, test with `derived-mode-p', otherwise use `eq'."
    wbkt-xwidget-autofill-fields))
 
 (defun wbkt-get-autofill-script ()
-  "Execute js actions defined in `wbkt-xwidget-autofill-fields'."
+  "Generate and pass JSON-encoded autofill fields to a JavaScript file."
   (require 'json)
-  (let ((encoded (when (fboundp 'json-encode)
-                   (json-encode (wbkt-xwidget-get-autofix-fields)))))
+  (let ((encoded
+         (when (fboundp 'json-encode)
+           (json-encode (wbkt-xwidget-get-autofix-fields)))))
     (wbkt-xwidget-pass-args (expand-file-name
                              "js/autofill.js"
                              wbkt-dir)
                             encoded)))
 
 (defun wbkt-get-dark-theme-script ()
-  "Execute js actions defined in `wbkt-xwidget-autofill-fields'."
+  "Return a JavaScript script that apply a dark theme to web content."
   (wbkt-xwidget-pass-args (expand-file-name
                            "js/injectcss.js"
                            wbkt-dir)
@@ -429,7 +460,7 @@ iframe,img,video {
 }`"))
 
 (defun wbkt-get-dark-theme-unset-script ()
-  "Execute js actions defined in `wbkt-xwidget-autofill-fields'."
+  "Return a script to unset dark theme filters in HTML elements."
   (wbkt-xwidget-pass-args (expand-file-name
                            "js/injectcss.js"
                            wbkt-dir)
@@ -441,7 +472,7 @@ iframe,img,video {
 }`"))
 
 (defun wbkt-get-flash-script ()
-  "Return script which inject `wbkt-xwidget-inactive-style'."
+  "Return the content of a JavaScript file with injected CSS styles and delay."
   (wbkt-xwidget-pass-args (expand-file-name
                            "js/injectcss.js"
                            wbkt-dir)
@@ -450,12 +481,12 @@ iframe,img,video {
                                    wbkt-xwidget-inactive-style))
                           "500"))
 (defun wbkt-current-session ()
-  "Return first found webkit session."
+  "Return the current xwidget-webkit session or the first xwidget in the list."
   (or (xwidget-webkit-current-session)
       (car xwidget-list)))
 
 (defun wbkt-xwidget--inject-navigator (&rest _)
-  "Inject clipboard polyfill."
+  "Inject JavaScript code from \"js/navigator.js\" into the active webkit session."
   (when-let ((active-session (wbkt-current-session)))
     (xwidget-webkit-execute-script active-session
                                    (with-temp-buffer
@@ -466,8 +497,8 @@ iframe,img,video {
                                      (buffer-string)))))
 
 (defun wbkt-xwidget-inject-navigator (&rest _)
-  "Inject clipboard polyfill."
-  (run-with-timer 1 nil 'wbkt-xwidget--inject-navigator))
+  "Run a timer to execute `wbkt-xwidget--inject-navigator' after 1 second."
+  (run-with-timer 1 nil #'wbkt-xwidget--inject-navigator))
 
 (defvar wbkt-xwidget-dark-theme nil)
 
@@ -484,14 +515,14 @@ iframe,img,video {
 
 ;;;###autoload
 (defun wbkt-xwidget-set-dark-theme ()
-  "Set dark theme."
+  "Reset the dark theme setting and toggle the theme."
   (interactive)
   (setq wbkt-xwidget-dark-theme nil)
   (wbkt-xwidget-toggle-theme))
 
 ;;;###autoload
 (defun wbkt-xwidget-unset-dark-theme ()
-  "Set dark theme."
+  "Set `wbkt-xwidget-dark-theme' to true and call `wbkt-xwidget-toggle-theme'."
   (interactive)
   (setq wbkt-xwidget-dark-theme t)
   (wbkt-xwidget-toggle-theme))
@@ -555,7 +586,7 @@ See `wbkt-xwidget-define-event-command'."
 
 ;;;###autoload
 (defun wbkt-xwidget-autofill ()
-  "Execute js actions defined in `wbkt-xwidget-autofill-fields'."
+  "Execute a JavaScript autofill script in the current webkit session."
   (interactive)
   (require 'json)
   (when-let* ((session (wbkt-current-session))
@@ -565,7 +596,7 @@ See `wbkt-xwidget-define-event-command'."
 
 ;;;###autoload
 (defun wbkt-xwidget-remove-cache ()
-  "Remove WebKitCache directories and kill all xwidget buffers."
+  "Remove WebKit cache directories and kill all xwidget-webkit-mode buffers."
   (interactive)
   (let ((dirs (seq-filter #'file-exists-p
                           '("~/.cache/emacs/WebKitCache/"
